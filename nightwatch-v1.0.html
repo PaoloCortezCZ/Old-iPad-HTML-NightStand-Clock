@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Nightwatch</title>
+<style>
+  :root {
+    --bg: #000;
+    --card: #111;
+    --digit: #9a9a9a;
+    --sub: #777;
+    --accent: #9a9a9a;
+    --line: #000;
+  }
+  body.red {
+    --card: #0d0303;
+    --digit: #c01818;
+    --sub: #a01818;
+    --accent: #c01818;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; user-select:none; }
+  html,body { width:100%; height:100%; overflow:hidden; background:var(--bg);
+    font-family:"Helvetica Neue", Helvetica, Arial, sans-serif; color:var(--digit);
+    -webkit-text-size-adjust:none; }
+  #app { display:-webkit-flex; display:flex; width:100%; height:100%; }
+
+  /* ===== Clock (left 2/3) ===== */
+  #clock {
+    -webkit-flex:2; flex:2;
+    display:-webkit-flex; display:flex;
+    -webkit-align-items:center; align-items:center;
+    -webkit-justify-content:center; justify-content:center;
+    padding:3vmin;
+  }
+  .flip {
+    position:relative;
+    width:42%; height:0; padding-bottom:42%;
+    background:var(--card); border-radius:5vmin;
+    margin:0 1.5vmin;
+  }
+  .flip .num {
+    position:absolute; left:0; top:0; width:100%; height:100%;
+    display:-webkit-flex; display:flex;
+    -webkit-align-items:center; align-items:center;
+    -webkit-justify-content:center; justify-content:center;
+    font-size:26vmin; font-weight:bold; letter-spacing:-1vmin;
+    color:var(--digit); line-height:1;
+    font-family:inherit;
+    -webkit-transform:scaleY(1); transform:scaleY(1);
+  }
+  body.h125 .flip .num { -webkit-transform:scaleY(1.25); transform:scaleY(1.25); }
+  body.h150 .flip .num { -webkit-transform:scaleY(1.5);  transform:scaleY(1.5); }
+  body.h200 .flip .num { -webkit-transform:scaleY(2);    transform:scaleY(2); }
+  /* digit spacing for tall modes */
+  body.h150 .flip .num, body.h200 .flip .num { letter-spacing:1vmin; }
+  /* side-panel text scales WITH clock height (real size, not stretched) */
+  body.h125 { --tx:1.15; }
+  body.h150 { --tx:1.3; }
+  body.h200 { --tx:1.5; }
+  /* font themes — applied to the WHOLE page */
+  body.f-comic      { font-family:"Comic Sans MS","Chalkboard SE","Comic Sans",cursive; }
+  body.f-rounded    { font-family:"Arial Rounded MT Bold","Avenir Next Rounded",Arial,sans-serif; }
+  body.f-typewriter { font-family:"American Typewriter","Courier New",serif; }
+  body.f-avenir     { font-family:"Avenir Next",Avenir,"Helvetica Neue",sans-serif; }
+  body.f-futura     { font-family:Futura,"Trebuchet MS",sans-serif; }
+  body.f-mono       { font-family:Menlo,"Courier New",Courier,monospace; }
+  body.f-serif      { font-family:Georgia,"Times New Roman",serif; }
+  body.f-marker     { font-family:"Marker Felt","Chalkboard SE",fantasy; }
+  /* digit tweaks for wide faces */
+  body.f-comic .flip .num, body.f-marker .flip .num { letter-spacing:0; font-size:21vmin; }
+  body.f-mono .flip .num, body.f-serif .flip .num,
+  body.f-typewriter .flip .num, body.f-rounded .flip .num { letter-spacing:0; font-size:24vmin; }
+  .flip:after {  /* horizontal split line */
+    content:""; position:absolute; left:0; right:0; top:50%; height:2px;
+    background:var(--line); margin-top:-1px; z-index:5;
+  }
+  .flip .sec {
+    position:absolute; right:3vmin; bottom:2vmin; z-index:6;
+    font-size:3.2vmin; font-weight:bold; color:var(--sub);
+  }
+
+  /* ===== Right column ===== */
+  #side {
+    -webkit-flex:1; flex:1;
+    display:-webkit-flex; display:flex;
+    -webkit-flex-direction:column; flex-direction:column;
+    padding:3vmin 3vmin 3vmin 0;
+  }
+  .panel {
+    background:var(--card); border-radius:4vmin;
+    padding:3vmin; overflow:hidden; position:relative;
+  }
+  #weather { -webkit-flex:2; flex:2; margin-bottom:3vmin;
+    display:-webkit-flex; display:flex;
+    -webkit-flex-direction:column; flex-direction:column;
+    -webkit-justify-content:center; justify-content:center; }
+  #btc { -webkit-flex:1; flex:1;
+    display:-webkit-flex; display:flex;
+    -webkit-flex-direction:column; flex-direction:column;
+    -webkit-justify-content:center; justify-content:center; }
+
+  #w-top { display:-webkit-flex; display:flex;
+    -webkit-align-items:center; align-items:center; }
+  #w-icon { font-size:calc(9vmin * var(--tx,1)); margin-right:3vmin; line-height:1; }
+  body.red #w-icon { -webkit-filter:grayscale(1) sepia(1) saturate(6) hue-rotate(-50deg) brightness(.7);
+    filter:grayscale(1) sepia(1) saturate(6) hue-rotate(-50deg) brightness(.7); }
+  #w-temp { font-size:calc(9vmin * var(--tx,1)); font-weight:bold; color:var(--digit); }
+  #w-desc { font-size:calc(3.4vmin * var(--tx,1)); color:var(--sub); margin-top:1.5vmin; }
+  #w-extra { font-size:calc(3vmin * var(--tx,1)); color:var(--sub); margin-top:1vmin; }
+  #w-sun { display:-webkit-flex; display:flex; margin-top:2.5vmin;
+    font-size:calc(3.2vmin * var(--tx,1)); color:var(--sub); }
+  #w-sun span { margin-right:4vmin; }
+  #w-place { position:absolute; top:2vmin; right:3vmin; font-size:calc(2.6vmin * var(--tx,1)); color:var(--sub); }
+
+  #btc-row { display:-webkit-flex; display:flex;
+    -webkit-align-items:baseline; align-items:baseline; }
+  #btc-price { font-size:calc(6.5vmin * var(--tx,1)); font-weight:bold; color:var(--digit); }
+  #btc-chg { font-size:calc(3.2vmin * var(--tx,1)); margin-left:2.5vmin; color:var(--sub); }
+  #btc-chg.up { color:#3a9a3a; } #btc-chg.down { color:#b04040; }
+  body.red #btc-chg.up, body.red #btc-chg.down { color:var(--sub); }
+  #btc-label { font-size:calc(2.8vmin * var(--tx,1)); color:var(--sub); margin-bottom:1vmin; }
+  #spark { width:100%; height:8vmin; margin-top:1.5vmin; display:block; }
+
+  /* ===== Controls / settings ===== */
+  #gear, #moon, #fs {
+    position:fixed; bottom:2vmin; z-index:20;
+    width:7vmin; height:7vmin; border-radius:50%;
+    background:var(--card); color:var(--sub); border:none;
+    font-size:3.6vmin; line-height:7vmin; text-align:center;
+    opacity:.35;
+  }
+  #gear { left:2vmin; } #moon { left:11vmin; } #fs { left:20vmin; }
+
+  #settings {
+    display:none; position:fixed; left:50%; top:50%; z-index:30;
+    -webkit-transform:translate(-50%,-50%); transform:translate(-50%,-50%);
+    background:#1a1a1a; border:1px solid #333; border-radius:3vmin;
+    padding:4vmin; width:70vmin; max-width:90%; color:#bbb; font-size:3vmin;
+  }
+  #settings.open { display:block; }
+  #settings label { display:block; margin:2.5vmin 0 .8vmin; color:#888; font-size:2.6vmin; }
+  #settings input, #settings select {
+    width:100%; padding:1.6vmin; font-size:3vmin; border-radius:1.5vmin;
+    border:1px solid #444; background:#000; color:#ccc;
+  }
+  #settings .row { display:-webkit-flex; display:flex; }
+  #settings .row > div { -webkit-flex:1; flex:1; margin-right:2vmin; }
+  #settings .row > div:last-child { margin-right:0; }
+  #settings button {
+    margin-top:3.5vmin; width:100%; padding:2vmin; font-size:3.2vmin;
+    border:none; border-radius:1.5vmin; background:#333; color:#ddd;
+  }
+  .err { color:#a33; font-size:2.8vmin; }
+  #s-preview {
+    margin-top:3vmin; padding:2vmin; background:#000; border-radius:1.5vmin;
+    border:1px solid #333; text-align:center;
+  }
+  #s-pv-big { font-size:7vmin; font-weight:bold; color:#9a9a9a; display:block; line-height:1.1; }
+  #s-pv-small { font-size:2.8vmin; color:#777; display:block; margin-top:.5vmin; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="clock">
+    <div class="flip"><div class="num" id="hh">--</div></div>
+    <div class="flip"><div class="num" id="mm">--</div><div class="sec" id="ss"></div></div>
+  </div>
+  <div id="side">
+    <div class="panel" id="weather">
+      <div id="w-place"></div>
+      <div id="w-top">
+        <div id="w-icon">⏳</div>
+        <div id="w-temp">--°</div>
+      </div>
+      <div id="w-desc">Loading weather…</div>
+      <div id="w-extra"></div>
+      <div id="w-sun"><span id="sunrise">☀︎↑ --:--</span><span id="sunset">☀︎↓ --:--</span></div>
+    </div>
+    <div class="panel" id="btc">
+      <div id="btc-label">BITCOIN · USD</div>
+      <div id="btc-row"><div id="btc-price">--</div><div id="btc-chg"></div></div>
+      <canvas id="spark"></canvas>
+    </div>
+  </div>
+</div>
+
+<button id="gear">⚙︎</button>
+<button id="moon">☾</button>
+<button id="fs">⛶</button>
+
+<div id="settings">
+  <label>Location (overrides geolocation; leave empty for auto-detect)</label>
+  <input id="s-place" type="text" placeholder="auto-detect">
+  <div class="row">
+    <div><label>Latitude</label><input id="s-lat" type="text"></div>
+    <div><label>Longitude</label><input id="s-lon" type="text"></div>
+  </div>
+  <div class="row">
+    <div><label>Units</label><select id="s-units"><option value="celsius">°C</option><option value="fahrenheit">°F</option></select></div>
+    <div><label>Night mode</label><select id="s-night"><option value="auto">Auto (22–07)</option><option value="on">Always red</option><option value="off">Always gray</option></select></div>
+  </div>
+  <div class="row">
+    <div><label>Night start (hour)</label><input id="s-nstart" type="text" value="22"></div>
+    <div><label>Night end (hour)</label><input id="s-nend" type="text" value="7"></div>
+  </div>
+  <div class="row">
+    <div><label>Font (whole page)</label><select id="s-font">
+      <option value="classic">Classic (Helvetica)</option>
+      <option value="comic">Comic Sans</option>
+      <option value="rounded">Rounded (Arial Rounded)</option>
+      <option value="avenir">Avenir Next</option>
+      <option value="futura">Futura</option>
+      <option value="typewriter">American Typewriter</option>
+      <option value="mono">Monospace (Menlo)</option>
+      <option value="serif">Serif (Georgia)</option>
+      <option value="marker">Marker Felt</option>
+    </select></div>
+    <div><label>Digit height</label><select id="s-height">
+      <option value="100">Normal</option>
+      <option value="125">Taller (+25%)</option>
+      <option value="150">Tallest (+50%)</option>
+      <option value="200">Double (+100%)</option>
+    </select></div>
+  </div>
+  <div id="s-preview"><span id="s-pv-big">20:57</span><span id="s-pv-small">Light rain · $61,749</span></div>
+  <button id="s-save">Save</button>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  // ---------- settings (in-memory + localStorage if available) ----------
+  var DEF = { place:"Prague", lat:50.0755, lon:14.4378, units:"celsius",
+              night:"auto", nstart:22, nend:7, manual:false,
+              font:"classic", height:"100" };
+  var cfg = DEF;
+  try {
+    var raw = localStorage.getItem("nw_cfg");
+    if (raw) { var p = JSON.parse(raw); for (var k in DEF) if (p[k]!==undefined) cfg[k]=p[k]; }
+  } catch(e){}
+  function saveCfg(){ try{ localStorage.setItem("nw_cfg", JSON.stringify(cfg)); }catch(e){} }
+
+  function $(id){ return document.getElementById(id); }
+  function pad(n){ return n<10 ? "0"+n : ""+n; }
+
+  // ---------- clock ----------
+  var ph="", pm="";
+  function tick(){
+    var d = new Date();
+    var h = pad(d.getHours()), m = pad(d.getMinutes()), s = pad(d.getSeconds());
+    if (h!==ph){ $("hh").textContent=h; ph=h; }
+    if (m!==pm){ $("mm").textContent=m; pm=m; }
+    $("ss").textContent = s;
+    applyNight(d);
+  }
+  setInterval(tick, 1000); tick();
+
+  // ---------- night red mode ----------
+  var manualOverride = null; // null = follow cfg, true/false = forced this session
+  function nightActive(d){
+    if (manualOverride !== null) return manualOverride;
+    if (cfg.night === "on") return true;
+    if (cfg.night === "off") return false;
+    var h = d.getHours(), a = +cfg.nstart, b = +cfg.nend;
+    return (a > b) ? (h >= a || h < b) : (h >= a && h < b);
+  }
+  function applyNight(d){
+    var on = nightActive(d || new Date());
+    var cls = [];
+    if (on) cls.push("red");
+    if (cfg.font && cfg.font!=="classic") cls.push("f-"+cfg.font);
+    if (cfg.height==="125") cls.push("h125");
+    if (cfg.height==="150") cls.push("h150");
+    if (cfg.height==="200") cls.push("h200");
+    var s = cls.join(" ");
+    if (document.body.className!==s) document.body.className=s;
+  }
+  $("moon").onclick = function(){
+    manualOverride = !nightActive(new Date());
+    applyNight();
+    drawSpark(); // redraw in new color
+  };
+
+  // ---------- fetch helper (XHR — works everywhere) ----------
+  function getJSON(url, ok, fail){
+    var x = new XMLHttpRequest();
+    x.open("GET", url, true);
+    x.onreadystatechange = function(){
+      if (x.readyState!==4) return;
+      if (x.status===200) { try { ok(JSON.parse(x.responseText)); } catch(e){ fail(e); } }
+      else fail(new Error("HTTP "+x.status));
+    };
+    x.onerror = function(){ fail(new Error("network")); };
+    x.send();
+  }
+
+  // ---------- weather ----------
+  var WMO = {
+    0:["☀️","Clear sky"],1:["🌤","Mostly clear"],2:["⛅️","Partly cloudy"],3:["☁️","Overcast"],
+    45:["🌫","Fog"],48:["🌫","Rime fog"],
+    51:["🌦","Light drizzle"],53:["🌦","Drizzle"],55:["🌧","Heavy drizzle"],
+    56:["🌧","Freezing drizzle"],57:["🌧","Freezing drizzle"],
+    61:["🌦","Light rain"],63:["🌧","Rain"],65:["🌧","Heavy rain"],
+    66:["🌧","Freezing rain"],67:["🌧","Freezing rain"],
+    71:["🌨","Light snow"],73:["🌨","Snow"],75:["❄️","Heavy snow"],77:["❄️","Snow grains"],
+    80:["🌦","Light showers"],81:["🌧","Showers"],82:["⛈","Violent showers"],
+    85:["🌨","Snow showers"],86:["🌨","Snow showers"],
+    95:["⛈","Thunderstorm"],96:["⛈","Storm w/ hail"],99:["⛈","Storm w/ hail"]
+  };
+  function hm(iso){ // "2026-06-10T04:51" -> "04:51"
+    var i = iso.indexOf("T"); return i>0 ? iso.substr(i+1,5) : iso;
+  }
+  function loadWeather(lat, lon, label){
+    var u = "https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+
+      "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code"+
+      "&daily=sunrise,sunset&timezone=auto&forecast_days=1"+
+      "&temperature_unit="+cfg.units;
+    getJSON(u, function(j){
+      var c = j.current || {};
+      var w = WMO[c.weather_code] || ["🌡","—"];
+      $("w-icon").textContent = w[0];
+      $("w-temp").textContent = Math.round(c.temperature_2m)+"°";
+      $("w-desc").textContent = w[1];
+      $("w-extra").textContent = "Feels "+Math.round(c.apparent_temperature)+"° · "+
+        c.relative_humidity_2m+"% · "+Math.round(c.wind_speed_10m)+" km/h";
+      if (j.daily && j.daily.sunrise) {
+        $("sunrise").textContent = "☀︎↑ "+hm(j.daily.sunrise[0]);
+        $("sunset").textContent  = "☀︎↓ "+hm(j.daily.sunset[0]);
+      }
+      $("w-place").textContent = label;
+    }, function(){
+      $("w-desc").innerHTML = '<span class="err">Weather unavailable</span>';
+    });
+  }
+  function startWeather(){
+    if (cfg.manual) { loadWeather(cfg.lat, cfg.lon, cfg.place); return; }
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        function(pos){ loadWeather(pos.coords.latitude.toFixed(3), pos.coords.longitude.toFixed(3), "📍 current location"); },
+        function(){ loadWeather(cfg.lat, cfg.lon, cfg.place); },
+        { timeout: 8000, maximumAge: 600000 }
+      );
+    } else loadWeather(cfg.lat, cfg.lon, cfg.place);
+  }
+  startWeather();
+  setInterval(startWeather, 15*60*1000); // refresh every 15 min
+
+  // ---------- bitcoin ----------
+  var sparkData = null;
+  function loadBTC(){
+    getJSON("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true",
+      function(j){
+        var b = j.bitcoin || {};
+        if (b.usd) $("btc-price").textContent = "$"+Math.round(b.usd).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        if (typeof b.usd_24h_change === "number") {
+          var ch = b.usd_24h_change;
+          var el = $("btc-chg");
+          el.textContent = (ch>=0?"▲ ":"▼ ")+Math.abs(ch).toFixed(1)+"%";
+          el.className = ch>=0 ? "up" : "down";
+        }
+      },
+      function(){ $("btc-price").innerHTML = '<span class="err">BTC unavailable</span>'; });
+    getJSON("https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1",
+      function(j){ if (j.prices && j.prices.length){ sparkData = j.prices; drawSpark(); } },
+      function(){});
+  }
+  function drawSpark(){
+    if (!sparkData) return;
+    var cv = $("spark");
+    var W = cv.clientWidth, H = cv.clientHeight;
+    if (!W || !H) return;
+    var r = window.devicePixelRatio || 1;
+    cv.width = W*r; cv.height = H*r;
+    var ctx = cv.getContext("2d"); ctx.scale(r,r);
+    var pts = sparkData, n = pts.length;
+    var min = Infinity, max = -Infinity, i;
+    for (i=0;i<n;i++){ var v=pts[i][1]; if(v<min)min=v; if(v>max)max=v; }
+    var span = (max-min)||1;
+    ctx.clearRect(0,0,W,H);
+    ctx.beginPath();
+    for (i=0;i<n;i++){
+      var x = i/(n-1)*W;
+      var y = H-2 - (pts[i][1]-min)/span*(H-4);
+      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    var red = document.body.className.indexOf("red")>=0;
+    ctx.strokeStyle = red ? "#c01818" : "#9a9a9a";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  loadBTC();
+  setInterval(loadBTC, 5*60*1000); // every 5 min (CoinGecko rate limits)
+  window.addEventListener("resize", drawSpark);
+  window.addEventListener("orientationchange", function(){ setTimeout(drawSpark, 400); });
+
+  // ---------- settings panel ----------
+  var FONTS = {
+    classic:'"Helvetica Neue",Helvetica,Arial,sans-serif',
+    comic:'"Comic Sans MS","Chalkboard SE","Comic Sans",cursive',
+    rounded:'"Arial Rounded MT Bold","Avenir Next Rounded",Arial,sans-serif',
+    avenir:'"Avenir Next",Avenir,"Helvetica Neue",sans-serif',
+    futura:'Futura,"Trebuchet MS",sans-serif',
+    typewriter:'"American Typewriter","Courier New",serif',
+    mono:'Menlo,"Courier New",Courier,monospace',
+    serif:'Georgia,"Times New Roman",serif',
+    marker:'"Marker Felt","Chalkboard SE",fantasy'
+  };
+  function updatePreview(){
+    var f = FONTS[$("s-font").value] || FONTS.classic;
+    $("s-preview").style.fontFamily = f;
+    var hv = $("s-height").value;
+    var sy = hv==="200" ? 2 : (hv==="150" ? 1.5 : (hv==="125" ? 1.25 : 1));
+    var t = "scaleY("+sy+")";
+    $("s-pv-big").style.webkitTransform = t;
+    $("s-pv-big").style.transform = t;
+  }
+  $("s-font").onchange = updatePreview;
+  $("s-height").onchange = updatePreview;
+  function fillForm(){
+    $("s-place").value = cfg.manual ? cfg.place : ""; $("s-lat").value = cfg.lat; $("s-lon").value = cfg.lon;
+    $("s-units").value = cfg.units; $("s-night").value = cfg.night;
+    $("s-nstart").value = cfg.nstart; $("s-nend").value = cfg.nend;
+    $("s-font").value = cfg.font; $("s-height").value = cfg.height;
+    updatePreview();
+  }
+  $("gear").onclick = function(){
+    var s = $("settings");
+    if (s.className==="open"){ s.className=""; } else { fillForm(); s.className="open"; }
+  };
+  $("s-save").onclick = function(){
+    var place = $("s-place").value.replace(/^\s+|\s+$/g,"");
+    cfg.lat = parseFloat($("s-lat").value) || DEF.lat;
+    cfg.lon = parseFloat($("s-lon").value) || DEF.lon;
+    if (place) {
+      cfg.place = place;
+      cfg.manual = true;
+      // geocode the typed place; overrides lat/lon if found
+      getJSON("https://geocoding-api.open-meteo.com/v1/search?count=1&name="+encodeURIComponent(place),
+        function(j){
+          if (j.results && j.results.length){
+            cfg.lat = j.results[0].latitude; cfg.lon = j.results[0].longitude;
+            saveCfg();
+          }
+          startWeather();
+        },
+        function(){ startWeather(); }); // geocoding failed -> use lat/lon fields
+    } else {
+      cfg.place = DEF.place;
+      cfg.manual = false; // empty -> back to auto geolocation
+    }
+    cfg.units = $("s-units").value;
+    cfg.night = $("s-night").value;
+    cfg.nstart = parseInt($("s-nstart").value,10); if(isNaN(cfg.nstart)) cfg.nstart=22;
+    cfg.nend = parseInt($("s-nend").value,10); if(isNaN(cfg.nend)) cfg.nend=7;
+    cfg.font = $("s-font").value;
+    cfg.height = $("s-height").value;
+    manualOverride = null;
+    saveCfg();
+    $("settings").className="";
+    applyNight(); startWeather(); loadBTC();
+  };
+
+  // ---------- fullscreen ----------
+  var de = document.documentElement;
+  var fsSupported = !!(de.requestFullscreen || de.webkitRequestFullscreen);
+  var standalone = !!navigator.standalone; // launched from Home Screen icon
+  if (!fsSupported || standalone) $("fs").style.display = "none";
+  $("fs").onclick = function(){
+    var fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+    if (fsEl) {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    } else {
+      if (de.requestFullscreen) de.requestFullscreen();
+      else if (de.webkitRequestFullscreen) de.webkitRequestFullscreen();
+    }
+  };
+
+  // keep screen awake hint: nothing reliable in old Safari — set Auto-Lock to Never on the iPad.
+})();
+</script>
+</body>
+</html>
