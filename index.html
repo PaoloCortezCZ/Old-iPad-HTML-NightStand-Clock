@@ -2,797 +2,128 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Nightwatch 1.1</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NightStand — bedside clock for older iPads</title>
+<meta name="description" content="Free single-file HTML bedside clock for old iPads. Flip clock, analog faces, weather, Bitcoin, night red mode. No app, no account.">
 <style>
   :root {
-    --bg: #000;
-    --card: #111;
-    --digit: #9a9a9a;
-    --sub: #777;
-    --line: #000;
-    --ck: 52;   /* clock digit size in vh */
-    --tx: 1;    /* top bar text multiplier */
+    --bg:#f5f3ee; --panel:#ffffff; --text:#22211e; --muted:#6b675e;
+    --accent:#c0392b; --border:#e3dfd5; --btn:#22211e; --btnText:#fff;
   }
-  body.red {
-    --card: #0d0303;
-    --digit: #c01818;
-    --sub: #a01818;
+  body.dark {
+    --bg:#0c0c0c; --panel:#161616; --text:#d8d4cb; --muted:#8d897f;
+    --accent:#e05545; --border:#2a2a2a; --btn:#d8d4cb; --btnText:#111;
   }
-  * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; user-select:none; }
-  html,body { width:100%; height:100%; overflow:hidden; background:var(--bg);
-    font-family:"Helvetica Neue", Helvetica, Arial, sans-serif; color:var(--digit);
-    -webkit-text-size-adjust:none; }
-  #app { display:-webkit-flex; display:flex;
-    -webkit-flex-direction:column; flex-direction:column;
-    width:100%; height:100%; }
-
-  /* font themes — whole page */
-  body.f-comic      { font-family:"Comic Sans MS","Chalkboard SE","Comic Sans",cursive; }
-  body.f-rounded    { font-family:"Arial Rounded MT Bold","Avenir Next Rounded",Arial,sans-serif; }
-  body.f-typewriter { font-family:"American Typewriter","Courier New",serif; }
-  body.f-avenir     { font-family:"Avenir Next",Avenir,"Helvetica Neue",sans-serif; }
-  body.f-futura     { font-family:Futura,"Trebuchet MS",sans-serif; }
-  body.f-mono       { font-family:Menlo,"Courier New",Courier,monospace; }
-  body.f-serif      { font-family:Georgia,"Times New Roman",serif; }
-  body.f-marker     { font-family:"Marker Felt","Chalkboard SE",fantasy; }
-
-  /* ===== top info bar ===== */
-  #topbar {
-    display:-webkit-flex; display:flex;
-    background:var(--card); border-radius:0 0 3vmin 3vmin;
-    padding:calc(1.6vh * var(--tx)) 2.5vmin;
-    padding-left:10vmin; /* clearance for Safari's fullscreen ✕ (top-left) */
-    -webkit-align-items:center; align-items:center;
-  }
-  #weather {
-    -webkit-flex:3; flex:3;
-    display:-webkit-flex; display:flex;
-    -webkit-align-items:center; align-items:center;
-    min-width:0;
-  }
-  #w-icon { font-size:calc(7vh * var(--tx)); line-height:1; margin-right:2vmin; }
-  body.red #w-icon, body.red #tmrw {
-    -webkit-filter:grayscale(1) sepia(1) saturate(6) hue-rotate(-50deg) brightness(.45);
-    filter:grayscale(1) sepia(1) saturate(6) hue-rotate(-50deg) brightness(.45);
-  }
-  #w-temp { font-size:calc(7vh * var(--tx)); font-weight:bold; margin-right:2.5vmin; }
-  #w-text { min-width:0; margin-right:2.5vmin; }
-  #w-desc { font-size:calc(2.6vh * var(--tx)); color:var(--sub); white-space:nowrap; }
-  #w-extra { font-size:calc(2.2vh * var(--tx)); color:var(--sub); margin-top:.4vh; white-space:nowrap; }
-  #w-sun { font-size:calc(2.4vh * var(--tx)); color:var(--sub); }
-  #w-sun div { margin:.4vh 0; white-space:nowrap; }
-  #w-place { position:absolute; top:1vh; left:10vmin; font-size:calc(1.8vh * var(--tx)); color:var(--sub); }
-
-  #divider { width:2px; background:#2a2a2a; -webkit-align-self:stretch; align-self:stretch; margin:0 2.5vmin; }
-  body.red #divider { background:#3a0808; }
-
-  #btc {
-    -webkit-flex:2; flex:2;
-    display:-webkit-flex; display:flex;
-    -webkit-align-items:center; align-items:center;
-    min-width:0;
-  }
-  #btc-info { margin-right:2.5vmin; }
-  #btc-label { font-size:calc(2vh * var(--tx)); color:var(--sub); white-space:nowrap; }
-  #btc-row { display:-webkit-flex; display:flex; -webkit-align-items:baseline; align-items:baseline; }
-  #btc-price { font-size:calc(4.6vh * var(--tx)); font-weight:bold; white-space:nowrap; }
-  #btc-chg { font-size:calc(2.4vh * var(--tx)); margin-left:1.5vmin; color:var(--sub); white-space:nowrap; }
-  #btc-chg.up { color:#3a9a3a; } #btc-chg.down { color:#b04040; }
-  body.red #btc-chg.up { color:#256325; } body.red #btc-chg.down { color:#6e1c1c; }
-  #spark { -webkit-flex:1; flex:1; height:calc(7vh * var(--tx)); min-width:0; display:block; }
-
-  /* ===== clock (dominant) ===== */
-  #clock {
-    -webkit-flex:1; flex:1;
-    display:-webkit-flex; display:flex;
-    -webkit-align-items:center; align-items:center;
-    -webkit-justify-content:center; justify-content:center;
-    padding:2vmin; position:relative; min-height:0;
-  }
-  .flip {
-    position:relative;
-    -webkit-flex:1; flex:1;
-    height:100%;
-    background:var(--card); border-radius:5vmin;
-    margin:0 1.2vmin;
-    overflow:hidden;
-  }
-  .flip .num {
-    position:absolute; left:0; top:0; width:100%; height:100%;
-    display:-webkit-flex; display:flex;
-    -webkit-align-items:center; align-items:center;
-    -webkit-justify-content:center; justify-content:center;
-    font-size:calc(1vh * var(--ck)); font-weight:bold; letter-spacing:-0.5vmin;
-    line-height:1;
-    -webkit-transform:scaleY(1); transform:scaleY(1);
-  }
-  body.h125 .flip .num { -webkit-transform:scaleY(1.25); transform:scaleY(1.25); }
-  body.h150 .flip .num { -webkit-transform:scaleY(1.5);  transform:scaleY(1.5); }
-  body.h200 .flip .num { -webkit-transform:scaleY(2);    transform:scaleY(2); }
-  body.h150 .flip .num, body.h200 .flip .num { letter-spacing:1vmin; }
-  body.f-comic .flip .num, body.f-marker .flip .num,
-  body.f-mono .flip .num, body.f-serif .flip .num,
-  body.f-typewriter .flip .num, body.f-rounded .flip .num { letter-spacing:0; }
-  .flip:after {
-    content:""; position:absolute; left:0; right:0; top:50%; height:2px;
-    background:var(--line); margin-top:-1px; z-index:5;
-  }
-  .flip .sec {
-    position:absolute; right:3vmin; bottom:2vmin; z-index:6;
-    font-size:3.2vmin; font-weight:bold; color:var(--sub);
-  }
-
-  /* ===== analog mode ===== */
-  #analog {
-    display:none;
-    -webkit-flex:1; flex:1; height:100%;
-    -webkit-align-items:center; align-items:center;
-    -webkit-justify-content:center; justify-content:center;
-  }
-  body.analog #analog { display:-webkit-flex; display:flex; }
-  body.analog .flip { display:none; }
-
-  /* ===== bottom bar ===== */
-  #botbar {
-    display:-webkit-flex; display:flex;
-    -webkit-align-items:center; align-items:center;
-    -webkit-justify-content:space-between; justify-content:space-between;
-    background:var(--card); border-radius:3vmin 3vmin 0 0;
-    padding:calc(1.2vh * var(--tx)) 2.5vmin;
-    font-size:calc(2.6vh * var(--tx)); color:var(--sub);
-  }
-  #date-line b { color:var(--digit); font-weight:bold; }
-  #tmrw { white-space:nowrap; margin-left:2.5vmin; }
-
-  /* ===== controls ===== */
-  #gear, #moon, #fs {
-    position:fixed; bottom:2vmin; z-index:20;
-    width:7vmin; height:7vmin; border-radius:50%;
-    background:var(--card); color:var(--sub); border:none;
-    font-size:3.6vmin; line-height:7vmin; text-align:center;
-    opacity:.35;
-  }
-  #gear { left:2vmin; } #moon { left:11vmin; } #fs { left:20vmin; }
-
-  /* ===== settings ===== */
-  #settings {
-    display:none; position:fixed; left:50%; top:50%; z-index:30;
-    -webkit-transform:translate(-50%,-50%); transform:translate(-50%,-50%);
-    background:#1a1a1a; border:1px solid #333; border-radius:3vmin;
-    padding:3.5vmin; width:74vmin; max-width:92%; max-height:92%;
-    overflow-y:auto; -webkit-overflow-scrolling:touch;
-    color:#bbb; font-size:3vmin;
-  }
-  #settings.open { display:block; }
-  #settings label { display:block; margin:2.2vmin 0 .7vmin; color:#888; font-size:2.6vmin; }
-  #settings input[type=text], #settings select {
-    width:100%; padding:1.5vmin; font-size:3vmin; border-radius:1.5vmin;
-    border:1px solid #444; background:#000; color:#ccc;
-  }
-  #settings input[type=range] { width:100%; }
-  #settings .row { display:-webkit-flex; display:flex; }
-  #settings .row > div { -webkit-flex:1; flex:1; margin-right:2vmin; min-width:0; }
-  #settings .row > div:last-child { margin-right:0; }
-  #settings button {
-    margin-top:3vmin; width:100%; padding:2vmin; font-size:3.2vmin;
-    border:none; border-radius:1.5vmin; background:#333; color:#ddd;
-  }
-  #s-preview {
-    margin-top:2.5vmin; padding:2vmin; background:#000; border-radius:1.5vmin;
-    border:1px solid #333; text-align:center;
-  }
-  #s-pv-big { font-size:7vmin; font-weight:bold; color:#9a9a9a; display:block; line-height:1.1; }
-  #s-pv-small { font-size:2.8vmin; color:#777; display:block; margin-top:.5vmin; }
-  .err { color:#a33; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text);
+    font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; line-height:1.6;
+    transition:background .3s,color .3s; }
+  .wrap { max-width:960px; margin:0 auto; padding:24px; }
+  header { text-align:center; padding:48px 16px 24px; }
+  h1 { font-size:clamp(36px,7vw,64px); letter-spacing:-2px; line-height:1.05; }
+  h1 .red { color:var(--accent); }
+  .tag { color:var(--muted); font-size:clamp(16px,2.5vw,20px); margin-top:12px; }
+  .cta { display:inline-block; margin:28px 8px 0; padding:16px 36px;
+    background:var(--btn); color:var(--btnText); text-decoration:none;
+    border-radius:14px; font-size:20px; font-weight:bold; }
+  .cta.alt { background:transparent; color:var(--text); border:2px solid var(--border); }
+  .shots { display:grid; grid-template-columns:1fr; gap:20px; margin:48px 0; }
+  .shot { background:var(--panel); border:1px solid var(--border); border-radius:16px;
+    padding:16px; text-align:center; }
+  .shot img { width:100%; height:auto; border-radius:10px; display:block; }
+  .shot p { color:var(--muted); font-size:15px; margin-top:10px; }
+  h2 { font-size:28px; margin:48px 0 16px; letter-spacing:-0.5px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:20px; }
+  .card h3 { font-size:17px; margin-bottom:6px; }
+  .card p { color:var(--muted); font-size:15px; }
+  ol { padding-left:24px; color:var(--muted); }
+  ol li { margin:8px 0; }
+  ol b { color:var(--text); }
+  footer { text-align:center; color:var(--muted); font-size:14px; padding:40px 16px;
+    border-top:1px solid var(--border); margin-top:56px; }
+  footer a { color:var(--muted); }
+  #theme { position:fixed; top:16px; right:16px; background:var(--panel);
+    border:1px solid var(--border); color:var(--text); border-radius:50%;
+    width:44px; height:44px; font-size:20px; cursor:pointer; }
+  .note { background:var(--panel); border:1px solid var(--border); border-left:4px solid var(--accent);
+    border-radius:10px; padding:14px 18px; color:var(--muted); font-size:15px; margin-top:16px; }
 </style>
 </head>
 <body>
-<div id="app">
-  <div id="topbar">
-    <div id="w-place"></div>
-    <div id="weather">
-      <div id="w-icon">⏳</div>
-      <div id="w-temp">--°</div>
-      <div id="w-text">
-        <div id="w-desc">Loading weather…</div>
-        <div id="w-extra"></div>
-      </div>
-      <div id="w-sun">
-        <div id="sunrise">☀︎↑ --:--</div>
-        <div id="sunset">☀︎↓ --:--</div>
-      </div>
+<button id="theme" title="Toggle light/dark">☾</button>
+
+<header>
+  <h1>Night<span class="red">Stand</span></h1>
+  <p class="tag">Turn your old iPad into a beautiful bedside clock.<br>
+  One HTML file. No app, no account, no ads. Free forever.</p>
+  <a class="cta" href="clock.html">▶︎ Open NightStand</a>
+  <a class="cta alt" href="https://github.com/paolocortezcz/Old-iPad-HTML-NightStand-Clock">GitHub</a>
+</header>
+
+<div class="wrap">
+
+  <div class="shots">
+    <div class="shot">
+      <img src="NightStand-1-1-Day.png" alt="NightStand day mode — flip clock with weather and Bitcoin bar">
+      <p>Day mode — 70's flip clock, local weather, sunrise &amp; sunset, Bitcoin with 24h graph</p>
     </div>
-    <div id="divider"></div>
-    <div id="btc">
-      <div id="btc-info">
-        <div id="btc-label">BITCOIN · USD</div>
-        <div id="btc-row"><div id="btc-price">--</div><div id="btc-chg"></div></div>
-      </div>
-      <canvas id="spark"></canvas>
+    <div class="shot">
+      <img src="NightStand-1-1-Red.png" alt="NightStand night red mode">
+      <p>Night mode — everything turns dim red automatically at bedtime. Easy on sleepy eyes.</p>
+    </div>
+    <div class="shot">
+      <img src="NightStand-1-1-Setting.png" alt="NightStand settings panel">
+      <p>Settings — location, units, clock styles, fonts, sliders with live preview</p>
     </div>
   </div>
-  <div id="clock">
-    <div class="flip"><div class="num" id="hh">--</div></div>
-    <div class="flip"><div class="num" id="mm">--</div><div class="sec" id="ss"></div></div>
-    <div id="analog"><canvas id="aclk"></canvas></div>
+
+  <h2>Why NightStand?</h2>
+  <div class="grid">
+    <div class="card"><h3>⏰ Five clock faces</h3>
+      <p>Flip cards, LED 7-segment, 70's square analog, minimal round, Swiss station. All resizable.</p></div>
+    <div class="card"><h3>🌙 Night red mode</h3>
+      <p>Auto-switches to dim red on your schedule (22–07 by default) or with one tap on ☾.</p></div>
+    <div class="card"><h3>🌦 Local weather</h3>
+      <p>Temperature, feels-like, humidity, wind, sunrise/sunset and tomorrow's forecast. Auto-located or any city.</p></div>
+    <div class="card"><h3>₿ Bitcoin ticker</h3>
+      <p>Live BTC/USD with 24h change and sparkline — green up, red down.</p></div>
+    <div class="card"><h3>📅 Date &amp; name days</h3>
+      <p>Day, date and the Czech svátek in the bottom bar.</p></div>
+    <div class="card"><h3>🕯 Made for old iPads</h3>
+      <p>Runs on iPad Mini 4 era Safari. No frameworks, no build, a single HTML file. Keeps the screen awake.</p></div>
   </div>
-  <div id="botbar">
-    <div id="date-line">--</div>
-    <div id="tmrw"></div>
-  </div>
+
+  <h2>Setup in one minute</h2>
+  <ol>
+    <li>Open <b><a href="clock.html">the clock</a></b> in Safari on your iPad and <b>allow location</b>.</li>
+    <li>Tap Share → <b>Add to Home Screen</b> — it becomes a fullscreen app with no browser bars.</li>
+    <li>Set Settings → Display &amp; Brightness → Auto-Lock → <b>Never</b>.</li>
+    <li>Put the iPad on a stand, charge overnight, sleep well.</li>
+  </ol>
+  <div class="note">Tip: everything is configurable via the dim ⚙︎ button in the bottom-left
+    corner of the clock — clock style, fonts, sizes, night hours, °C/°F, location.</div>
+
 </div>
 
-<button id="gear">⚙︎</button>
-<button id="moon">☾</button>
-<button id="fs">⛶</button>
-
-<div id="settings">
-  <label>Location (overrides geolocation; leave empty for auto-detect)</label>
-  <input id="s-place" type="text" placeholder="auto-detect">
-  <div class="row">
-    <div><label>Latitude</label><input id="s-lat" type="text"></div>
-    <div><label>Longitude</label><input id="s-lon" type="text"></div>
-  </div>
-  <div class="row">
-    <div><label>Units</label><select id="s-units"><option value="celsius">°C</option><option value="fahrenheit">°F</option></select></div>
-    <div><label>Night mode</label><select id="s-night"><option value="auto">Auto (22–07)</option><option value="on">Always red</option><option value="off">Always gray</option></select></div>
-  </div>
-  <div class="row">
-    <div><label>Night start (hour)</label><input id="s-nstart" type="text" value="22"></div>
-    <div><label>Night end (hour)</label><input id="s-nend" type="text" value="7"></div>
-  </div>
-  <label>Clock style</label>
-  <select id="s-style">
-    <option value="flip">Digital — flip cards</option>
-    <option value="seg">Digital — LED 7-segment</option>
-    <option value="a70">Analog — 70's square</option>
-    <option value="around">Analog — minimal round</option>
-    <option value="astation">Analog — Swiss station</option>
-  </select>
-  <div class="row">
-    <div><label>Font (whole page)</label><select id="s-font">
-      <option value="classic">Classic (Helvetica)</option>
-      <option value="comic">Comic Sans</option>
-      <option value="rounded">Rounded (Arial Rounded)</option>
-      <option value="avenir">Avenir Next</option>
-      <option value="futura">Futura</option>
-      <option value="typewriter">American Typewriter</option>
-      <option value="mono">Monospace (Menlo)</option>
-      <option value="serif">Serif (Georgia)</option>
-      <option value="marker">Marker Felt</option>
-    </select></div>
-    <div><label>Digit height (stretch)</label><select id="s-height">
-      <option value="100">Normal</option>
-      <option value="125">Taller (+25%)</option>
-      <option value="150">Tallest (+50%)</option>
-      <option value="200">Double (+100%)</option>
-    </select></div>
-  </div>
-  <label>Clock size <span id="s-clock-val"></span></label>
-  <input id="s-clock" type="range" min="30" max="85" step="1">
-  <label>Info bar size <span id="s-bar-val"></span></label>
-  <input id="s-bar" type="range" min="70" max="200" step="5">
-  <div id="s-preview"><span id="s-pv-big">20:57</span><span id="s-pv-small">Light rain · $61,749</span></div>
-  <button id="s-save">Save</button>
-</div>
+<footer>
+  NightStand · free &amp; open source ·
+  <a href="https://github.com/paolocortezcz/Old-iPad-HTML-NightStand-Clock">source on GitHub</a><br>
+  Weather by Open-Meteo · Bitcoin by CoinGecko · Name days by svatkyapi.cz
+</footer>
 
 <script>
 (function(){
-  "use strict";
-  // ---------- settings ----------
-  var DEF = { place:"Prague", lat:50.0755, lon:14.4378, units:"celsius",
-              night:"auto", nstart:22, nend:7, manual:false,
-              font:"classic", height:"100", clockSize:52, barSize:100, style:"flip" };
-  var cfg = DEF;
-  try {
-    var raw = localStorage.getItem("nw_cfg11");
-    if (raw) { var p = JSON.parse(raw); for (var k in DEF) if (p[k]!==undefined) cfg[k]=p[k]; }
-  } catch(e){}
-  if (cfg.style==="analog") cfg.style="a70"; // migrate old setting
-  function saveCfg(){ try{ localStorage.setItem("nw_cfg11", JSON.stringify(cfg)); }catch(e){} }
-
-  function $(id){ return document.getElementById(id); }
-  function pad(n){ return n<10 ? "0"+n : ""+n; }
-
-  function applySizes(){
-    document.body.style.setProperty("--ck", cfg.clockSize);
-    document.body.style.setProperty("--tx", cfg.barSize/100);
-    drawSpark();
+  var b=document.body, t=document.getElementById("theme");
+  function set(dark){
+    b.className = dark ? "dark" : "";
+    t.textContent = dark ? "☀︎" : "☾";
+    try{ localStorage.setItem("ns_theme", dark?"dark":"light"); }catch(e){}
   }
-
-  // ---------- clock ----------
-  var ph="", pm="";
-  function tick(){
-    var d = new Date();
-    var h = pad(d.getHours()), m = pad(d.getMinutes()), s = pad(d.getSeconds());
-    if (h!==ph){ $("hh").textContent=h; ph=h; }
-    if (m!==pm){ $("mm").textContent=m; pm=m; }
-    $("ss").textContent = s;
-    applyNight(d);
-    updateDateLine();
-    if (cfg.style!=="flip") drawCanvasClock(d);
-  }
-
-  // ---------- analog clock (70's minimal: dashes only) ----------
-  function cssVar(name, fb){
-    try {
-      var v = getComputedStyle(document.body).getPropertyValue(name);
-      return (v && v.replace(/\s/g,"")) || fb;
-    } catch(e){ return fb; }
-  }
-  function drawCanvasClock(d){
-    var cv = $("aclk"), p = cv.parentNode;
-    if (!p.clientWidth) return;
-    var f = Math.min(1, Math.max(0.4, cfg.clockSize/60));
-    var pw = p.clientWidth*0.97, ph = p.clientHeight*0.97;
-    var r = window.devicePixelRatio || 1;
-    var W, H, S;
-    if (cfg.style==="seg") {
-      W = Math.floor(pw*f); H = Math.floor(Math.min(ph, W*0.40));
-    } else if (cfg.style==="a70") {
-      H = Math.floor(Math.min(ph, pw/1.25)*f); W = Math.floor(H*1.25);
-    } else {
-      S = Math.floor(Math.min(pw,ph)*f); W = S; H = S;
-    }
-    cv.style.width = W+"px"; cv.style.height = H+"px";
-    if (cv.width!==W*r || cv.height!==H*r){ cv.width = W*r; cv.height = H*r; }
-    var ctx = cv.getContext("2d");
-    ctx.setTransform(r,0,0,r,0,0);
-    ctx.clearRect(0,0,W,H);
-    var digit = cssVar("--digit","#9a9a9a"),
-        sub   = cssVar("--sub","#777"),
-        card  = cssVar("--card","#111");
-    if (cfg.style==="seg") drawSeg(ctx,W,H,d,digit);
-    else drawAnalogFace(ctx,W,H,d,digit,sub,card);
-  }
-
-  function roundRectPath(ctx,x,y,w,h,rad){
-    ctx.beginPath();
-    ctx.moveTo(x+rad,y);
-    ctx.arcTo(x+w,y,x+w,y+h,rad);
-    ctx.arcTo(x+w,y+h,x,y+h,rad);
-    ctx.arcTo(x,y+h,x,y,rad);
-    ctx.arcTo(x,y,x+w,y,rad);
-    ctx.closePath();
-  }
-
-  function drawAnalogFace(ctx,W,H,d,digit,sub,card){
-    var cx=W/2, cy=H/2, R=Math.min(W,H)/2, S=Math.min(W,H);
-    var st = cfg.style;
-    // --- face ---
-    if (st==="a70"){
-      roundRectPath(ctx,1,1,W-2,H-2,H*0.28);
-      ctx.fillStyle=card; ctx.fill();
-      ctx.globalAlpha=0.5; ctx.strokeStyle=sub; ctx.lineWidth=S*0.012; ctx.stroke();
-      ctx.globalAlpha=1;
-    } else {
-      ctx.beginPath(); ctx.arc(cx,cy,R-1,0,Math.PI*2);
-      ctx.fillStyle=card; ctx.fill();
-    }
-    var i,a;
-    if (st==="astation"){
-      // Swiss railway: 60 minute ticks + 12 hour bars, butt ends
-      ctx.lineCap="butt";
-      for (i=0;i<60;i++){
-        a=i/60*Math.PI*2;
-        var hour=(i%5===0);
-        ctx.beginPath();
-        ctx.moveTo(cx+Math.sin(a)*R*(hour?0.74:0.86), cy-Math.cos(a)*R*(hour?0.74:0.86));
-        ctx.lineTo(cx+Math.sin(a)*R*0.94, cy-Math.cos(a)*R*0.94);
-        ctx.strokeStyle = hour?digit:sub;
-        ctx.lineWidth = S*(hour?0.026:0.008);
-        ctx.stroke();
-      }
-    } else {
-      // minimal 70's: hour dashes only, rounded, quarters longer
-      ctx.lineCap="round";
-      var Rm = R*0.92;
-      for (i=0;i<12;i++){
-        a=i/12*Math.PI*2;
-        var lon=(i%3===0);
-        ctx.beginPath();
-        ctx.moveTo(cx+Math.sin(a)*Rm*(lon?0.80:0.84), cy-Math.cos(a)*Rm*(lon?0.80:0.84));
-        ctx.lineTo(cx+Math.sin(a)*Rm*0.95, cy-Math.cos(a)*Rm*0.95);
-        ctx.strokeStyle=sub;
-        ctx.lineWidth=S*(lon?0.022:0.014);
-        ctx.stroke();
-      }
-    }
-    // --- hands ---
-    var h=d.getHours()%12, m=d.getMinutes(), s=d.getSeconds();
-    var ah=(h+m/60)/12*Math.PI*2,
-        am=(m+s/60)/60*Math.PI*2,
-        as=s/60*Math.PI*2;
-    var station = (st==="astation");
-    ctx.lineCap = station ? "butt" : "round";
-    function hand(angle,len,w,col,tail){
-      ctx.beginPath();
-      ctx.moveTo(cx-Math.sin(angle)*R*tail, cy+Math.cos(angle)*R*tail);
-      ctx.lineTo(cx+Math.sin(angle)*R*len,  cy-Math.cos(angle)*R*len);
-      ctx.strokeStyle=col; ctx.lineWidth=w; ctx.stroke();
-    }
-    hand(ah, station?0.55:0.50, S*0.042, digit, 0.12);
-    hand(am, station?0.80:0.74, S*0.028, digit, 0.12);
-    if (station){
-      // red second hand with disc near tip (SBB style)
-      var sec="#b04040";
-      hand(as, 0.62, S*0.010, sec, 0.16);
-      ctx.beginPath();
-      ctx.arc(cx+Math.sin(as)*R*0.62, cy-Math.cos(as)*R*0.62, S*0.035, 0, Math.PI*2);
-      ctx.fillStyle=sec; ctx.fill();
-    } else {
-      hand(as, 0.82, S*0.008, sub, 0.12);
-    }
-    ctx.beginPath(); ctx.arc(cx,cy,S*0.026,0,Math.PI*2);
-    ctx.fillStyle=digit; ctx.fill();
-  }
-
-  // --- seven-segment LED digital ---
-  var SEGMAP=["ABCDEF","BC","ABGED","ABGCD","FGBC","AFGCD","AFGEDC","ABC","ABCDEFG","ABCFGD"];
-  function drawSeg(ctx,W,H,d,color){
-    var dh=H*0.96, y0=H*0.02;
-    var dw=W*0.185, t=dw*0.17;
-    var xs=[W*0.03, W*0.255, W*0.555, W*0.78];
-    var hh=pad(d.getHours()), mm=pad(d.getMinutes());
-    var digits=[hh.charAt(0),hh.charAt(1),mm.charAt(0),mm.charAt(1)];
-    ctx.lineCap="round";
-    ctx.strokeStyle=color; ctx.fillStyle=color;
-    function seg(x,y,w2,h2,which,on){
-      ctx.globalAlpha = on?1:0.07;
-      var g=t*0.7, mid=y+h2/2;
-      ctx.beginPath();
-      if (which==="A"){ ctx.moveTo(x+g,y+t/2); ctx.lineTo(x+w2-g,y+t/2); }
-      else if (which==="G"){ ctx.moveTo(x+g,mid); ctx.lineTo(x+w2-g,mid); }
-      else if (which==="D"){ ctx.moveTo(x+g,y+h2-t/2); ctx.lineTo(x+w2-g,y+h2-t/2); }
-      else if (which==="F"){ ctx.moveTo(x+t/2,y+g); ctx.lineTo(x+t/2,mid-g*0.7); }
-      else if (which==="B"){ ctx.moveTo(x+w2-t/2,y+g); ctx.lineTo(x+w2-t/2,mid-g*0.7); }
-      else if (which==="E"){ ctx.moveTo(x+t/2,mid+g*0.7); ctx.lineTo(x+t/2,y+h2-g); }
-      else if (which==="C"){ ctx.moveTo(x+w2-t/2,mid+g*0.7); ctx.lineTo(x+w2-t/2,y+h2-g); }
-      ctx.lineWidth=t; ctx.stroke();
-    }
-    var ALL="ABCDEFG", i, j, lit;
-    for (i=0;i<4;i++){
-      lit = SEGMAP[parseInt(digits[i],10)];
-      for (j=0;j<7;j++){
-        var wch=ALL.charAt(j);
-        seg(xs[i], y0, dw, dh, wch, lit.indexOf(wch)>=0);
-      }
-    }
-    // colon — blinks every second
-    ctx.globalAlpha = (d.getSeconds()%2===0) ? 1 : 0.07;
-    ctx.beginPath(); ctx.arc(W*0.5, y0+dh*0.3, t*0.55, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(W*0.5, y0+dh*0.7, t*0.55, 0, Math.PI*2); ctx.fill();
-    ctx.globalAlpha=1;
-  }
-  setInterval(tick, 1000);
-
-  // ---------- date line (bottom bar) ----------
-  var DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-  var MONTHS = ["January","February","March","April","May","June",
-                "July","August","September","October","November","December"];
-  var nameday = "", dateShown = "";
-  function updateDateLine(){
-    var d = new Date();
-    var key = d.getDate()+"."+d.getMonth();
-    if (key===dateShown && $("date-line").innerHTML.indexOf("--")<0) return;
-    dateShown = key;
-    var html = "<b>"+DAYS[d.getDay()]+"</b> · "+d.getDate()+". "+MONTHS[d.getMonth()]+" "+d.getFullYear();
-    if (nameday) html += " · Svátek: "+nameday;
-    $("date-line").innerHTML = html;
-  }
-  function loadNameday(){
-    getJSON("https://svatkyapi.cz/api/day", function(j){
-      if (j && j.name){ nameday = j.name; dateShown=""; updateDateLine(); }
-    }, function(){ /* no name day — line still shows date */ });
-  }
-
-  // ---------- night red mode ----------
-  var manualOverride = null;
-  function nightActive(d){
-    if (manualOverride !== null) return manualOverride;
-    if (cfg.night === "on") return true;
-    if (cfg.night === "off") return false;
-    var h = d.getHours(), a = +cfg.nstart, b = +cfg.nend;
-    return (a > b) ? (h >= a || h < b) : (h >= a && h < b);
-  }
-  function applyNight(d){
-    var on = nightActive(d || new Date());
-    var cls = [];
-    if (on) cls.push("red");
-    if (cfg.font && cfg.font!=="classic") cls.push("f-"+cfg.font);
-    if (cfg.height==="125") cls.push("h125");
-    if (cfg.height==="150") cls.push("h150");
-    if (cfg.height==="200") cls.push("h200");
-    if (cfg.style!=="flip") cls.push("analog"); // any canvas style hides flip cards
-    var s = cls.join(" ");
-    if (document.body.className!==s) document.body.className=s;
-  }
-  $("moon").onclick = function(){
-    manualOverride = !nightActive(new Date());
-    applyNight();
-    drawSpark();
-  };
-
-  // ---------- fetch helper ----------
-  function getJSON(url, ok, fail){
-    var x = new XMLHttpRequest();
-    x.open("GET", url, true);
-    x.onreadystatechange = function(){
-      if (x.readyState!==4) return;
-      if (x.status===200) { try { ok(JSON.parse(x.responseText)); } catch(e){ fail(e); } }
-      else fail(new Error("HTTP "+x.status));
-    };
-    x.onerror = function(){ fail(new Error("network")); };
-    x.send();
-  }
-
-  // ---------- weather ----------
-  var WMO = {
-    0:["☀️","Clear sky"],1:["🌤","Mostly clear"],2:["⛅️","Partly cloudy"],3:["☁️","Overcast"],
-    45:["🌫","Fog"],48:["🌫","Rime fog"],
-    51:["🌦","Light drizzle"],53:["🌦","Drizzle"],55:["🌧","Heavy drizzle"],
-    56:["🌧","Freezing drizzle"],57:["🌧","Freezing drizzle"],
-    61:["🌦","Light rain"],63:["🌧","Rain"],65:["🌧","Heavy rain"],
-    66:["🌧","Freezing rain"],67:["🌧","Freezing rain"],
-    71:["🌨","Light snow"],73:["🌨","Snow"],75:["❄️","Heavy snow"],77:["❄️","Snow grains"],
-    80:["🌦","Light showers"],81:["🌧","Showers"],82:["⛈","Violent showers"],
-    85:["🌨","Snow showers"],86:["🌨","Snow showers"],
-    95:["⛈","Thunderstorm"],96:["⛈","Storm w/ hail"],99:["⛈","Storm w/ hail"]
-  };
-  function hm(iso){ var i = iso.indexOf("T"); return i>0 ? iso.substr(i+1,5) : iso; }
-  function loadWeather(lat, lon, label){
-    var u = "https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+
-      "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code"+
-      "&daily=sunrise,sunset,weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=2"+
-      "&temperature_unit="+cfg.units;
-    getJSON(u, function(j){
-      var c = j.current || {};
-      var w = WMO[c.weather_code] || ["🌡","—"];
-      $("w-icon").textContent = w[0];
-      $("w-temp").textContent = Math.round(c.temperature_2m)+"°";
-      $("w-desc").textContent = w[1];
-      $("w-extra").textContent = "Feels "+Math.round(c.apparent_temperature)+"° · "+
-        c.relative_humidity_2m+"% · "+Math.round(c.wind_speed_10m)+" km/h";
-      if (j.daily && j.daily.sunrise) {
-        $("sunrise").textContent = "☀︎↑ "+hm(j.daily.sunrise[0]);
-        $("sunset").textContent  = "☀︎↓ "+hm(j.daily.sunset[0]);
-      }
-      if (j.daily && j.daily.weather_code && j.daily.weather_code.length>1) {
-        var tw = WMO[j.daily.weather_code[1]] || ["🌡",""];
-        $("tmrw").textContent = "Tomorrow "+tw[0]+" "+
-          Math.round(j.daily.temperature_2m_min[1])+"°–"+
-          Math.round(j.daily.temperature_2m_max[1])+"° "+tw[1];
-      }
-      $("w-place").textContent = label;
-    }, function(){
-      $("w-desc").innerHTML = '<span class="err">Weather unavailable</span>';
-    });
-  }
-  function startWeather(){
-    if (cfg.manual) { loadWeather(cfg.lat, cfg.lon, cfg.place); return; }
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        function(pos){ loadWeather(pos.coords.latitude.toFixed(3), pos.coords.longitude.toFixed(3), "📍 current location"); },
-        function(){ loadWeather(cfg.lat, cfg.lon, cfg.place); },
-        { timeout: 8000, maximumAge: 600000 }
-      );
-    } else loadWeather(cfg.lat, cfg.lon, cfg.place);
-  }
-
-  // ---------- bitcoin ----------
-  var sparkData = null, priceOk = false;
-  function fmtUsd(v){
-    return "$"+Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  }
-  function loadBTC(){
-    getJSON("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true",
-      function(j){
-        var b = j.bitcoin || {};
-        if (b.usd) { $("btc-price").textContent = fmtUsd(b.usd); priceOk = true; }
-        if (typeof b.usd_24h_change === "number") {
-          var ch = b.usd_24h_change;
-          var el = $("btc-chg");
-          el.textContent = (ch>=0?"▲ ":"▼ ")+Math.abs(ch).toFixed(1)+"%";
-          el.className = ch>=0 ? "up" : "down";
-        }
-      },
-      function(){
-        // fallback: use last sparkline point if we have one
-        if (sparkData && sparkData.length) {
-          $("btc-price").textContent = fmtUsd(sparkData[sparkData.length-1][1]);
-        } else if (!priceOk) {
-          $("btc-price").innerHTML = '<span class="err">BTC n/a</span>';
-        }
-      });
-    getJSON("https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1",
-      function(j){
-        if (j.prices && j.prices.length){
-          sparkData = j.prices;
-          drawSpark();
-          if (!priceOk) $("btc-price").textContent = fmtUsd(sparkData[sparkData.length-1][1]);
-        }
-      },
-      function(){});
-  }
-  function drawSpark(){
-    if (!sparkData) return;
-    var cv = $("spark");
-    var W = cv.clientWidth, H = cv.clientHeight;
-    if (!W || !H) return;
-    var r = window.devicePixelRatio || 1;
-    cv.width = W*r; cv.height = H*r;
-    var ctx = cv.getContext("2d"); ctx.scale(r,r);
-    var pts = sparkData, n = pts.length;
-    var min = Infinity, max = -Infinity, i;
-    for (i=0;i<n;i++){ var v=pts[i][1]; if(v<min)min=v; if(v>max)max=v; }
-    var span = (max-min)||1;
-    ctx.clearRect(0,0,W,H);
-    ctx.beginPath();
-    for (i=0;i<n;i++){
-      var x = i/(n-1)*W;
-      var y = H-2 - (pts[i][1]-min)/span*(H-4);
-      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-    }
-    // color by trend: green when up over the period, red when down — in ALL modes
-    var up = pts[n-1][1] >= pts[0][1];
-    var night = document.body.className.indexOf("red")>=0;
-    ctx.strokeStyle = night ? (up ? "#256325" : "#6e1c1c")
-                            : (up ? "#3a9a3a" : "#b04040");
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  }
-  function redrawAll(){ drawSpark(); if (cfg.style!=="flip") drawCanvasClock(new Date()); }
-  window.addEventListener("resize", redrawAll);
-  window.addEventListener("orientationchange", function(){ setTimeout(redrawAll, 400); });
-
-  // ---------- settings panel ----------
-  var FONTS = {
-    classic:'"Helvetica Neue",Helvetica,Arial,sans-serif',
-    comic:'"Comic Sans MS","Chalkboard SE","Comic Sans",cursive',
-    rounded:'"Arial Rounded MT Bold","Avenir Next Rounded",Arial,sans-serif',
-    avenir:'"Avenir Next",Avenir,"Helvetica Neue",sans-serif',
-    futura:'Futura,"Trebuchet MS",sans-serif',
-    typewriter:'"American Typewriter","Courier New",serif',
-    mono:'Menlo,"Courier New",Courier,monospace',
-    serif:'Georgia,"Times New Roman",serif',
-    marker:'"Marker Felt","Chalkboard SE",fantasy'
-  };
-  function updatePreview(){
-    var f = FONTS[$("s-font").value] || FONTS.classic;
-    $("s-preview").style.fontFamily = f;
-    var hv = $("s-height").value;
-    var sy = hv==="200" ? 2 : (hv==="150" ? 1.5 : (hv==="125" ? 1.25 : 1));
-    var t = "scaleY("+sy+")";
-    $("s-pv-big").style.webkitTransform = t;
-    $("s-pv-big").style.transform = t;
-  }
-  $("s-font").onchange = updatePreview;
-  $("s-height").onchange = updatePreview;
-
-  function sliderLabels(){
-    $("s-clock-val").textContent = "("+$("s-clock").value+")";
-    $("s-bar-val").textContent = "("+$("s-bar").value+"%)";
-  }
-  // live preview while sliding
-  function liveSlide(){
-    sliderLabels();
-    document.body.style.setProperty("--ck", $("s-clock").value);
-    document.body.style.setProperty("--tx", $("s-bar").value/100);
-    drawSpark();
-    if (cfg.style!=="flip"){ var tmp=cfg.clockSize; cfg.clockSize=parseInt($("s-clock").value,10)||tmp; drawCanvasClock(new Date()); cfg.clockSize=tmp; }
-  }
-  $("s-clock").oninput = liveSlide; $("s-clock").onchange = liveSlide;
-  $("s-bar").oninput = liveSlide;   $("s-bar").onchange = liveSlide;
-
-  function fillForm(){
-    $("s-place").value = cfg.manual ? cfg.place : "";
-    $("s-lat").value = cfg.lat; $("s-lon").value = cfg.lon;
-    $("s-units").value = cfg.units; $("s-night").value = cfg.night;
-    $("s-nstart").value = cfg.nstart; $("s-nend").value = cfg.nend;
-    $("s-font").value = cfg.font; $("s-height").value = cfg.height;
-    $("s-style").value = cfg.style;
-    $("s-clock").value = cfg.clockSize; $("s-bar").value = cfg.barSize;
-    sliderLabels();
-    updatePreview();
-  }
-  $("gear").onclick = function(){
-    var s = $("settings");
-    if (s.className==="open"){ s.className=""; applySizes(); } // discard unsaved slides
-    else { fillForm(); s.className="open"; }
-  };
-  $("s-save").onclick = function(){
-    var place = $("s-place").value.replace(/^\s+|\s+$/g,"");
-    cfg.lat = parseFloat($("s-lat").value) || DEF.lat;
-    cfg.lon = parseFloat($("s-lon").value) || DEF.lon;
-    if (place) {
-      cfg.place = place;
-      cfg.manual = true;
-      getJSON("https://geocoding-api.open-meteo.com/v1/search?count=1&name="+encodeURIComponent(place),
-        function(j){
-          if (j.results && j.results.length){
-            cfg.lat = j.results[0].latitude; cfg.lon = j.results[0].longitude;
-            saveCfg();
-          }
-          startWeather();
-        },
-        function(){ startWeather(); });
-    } else {
-      cfg.place = DEF.place;
-      cfg.manual = false;
-    }
-    cfg.units = $("s-units").value;
-    cfg.night = $("s-night").value;
-    cfg.nstart = parseInt($("s-nstart").value,10); if(isNaN(cfg.nstart)) cfg.nstart=22;
-    cfg.nend = parseInt($("s-nend").value,10); if(isNaN(cfg.nend)) cfg.nend=7;
-    cfg.font = $("s-font").value;
-    cfg.height = $("s-height").value;
-    cfg.style = $("s-style").value;
-    cfg.clockSize = parseInt($("s-clock").value,10) || DEF.clockSize;
-    cfg.barSize = parseInt($("s-bar").value,10) || DEF.barSize;
-    manualOverride = null;
-    saveCfg();
-    $("settings").className="";
-    applyNight(); applySizes(); startWeather(); loadBTC();
-  };
-
-  // ---------- fullscreen ----------
-  var de = document.documentElement;
-  var fsSupported = !!(de.requestFullscreen || de.webkitRequestFullscreen);
-  var standalone = !!navigator.standalone;
-  if (!fsSupported || standalone) $("fs").style.display = "none";
-  $("fs").onclick = function(){
-    var fsEl = document.fullscreenElement || document.webkitFullscreenElement;
-    if (fsEl) {
-      if (document.exitFullscreen) document.exitFullscreen();
-      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-    } else {
-      if (de.requestFullscreen) de.requestFullscreen();
-      else if (de.webkitRequestFullscreen) de.webkitRequestFullscreen();
-    }
-  };
-
-  // ---------- keep screen awake ----------
-  // 1) Wake Lock API (iPadOS 16.4+, desktop browsers)
-  // 2) fallback for older iOS: invisible looping micro-video (NoSleep trick)
-  var WAKE_MP4 = "data:video/mp4;base64,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";
-  var wakeVideo = null;
-  function videoWake(){
-    if (wakeVideo) { if (wakeVideo.paused) wakeVideo.play(); return; }
-    var v = document.createElement("video");
-    v.setAttribute("playsinline","");
-    v.setAttribute("muted","");
-    v.muted = true; v.loop = true;
-    v.src = WAKE_MP4;
-    v.style.position="fixed"; v.style.left="0"; v.style.bottom="0";
-    v.style.width="1px"; v.style.height="1px"; v.style.opacity="0";
-    v.style.pointerEvents="none";
-    document.body.appendChild(v);
-    var p = v.play();
-    if (p && p.catch) p.catch(function(){ /* will retry on first touch */ });
-    wakeVideo = v;
-  }
-  function enableWake(){
-    if (navigator.wakeLock && navigator.wakeLock.request) {
-      navigator.wakeLock.request("screen").catch(function(){ videoWake(); });
-    } else videoWake();
-  }
-  document.addEventListener("visibilitychange", function(){
-    if (!document.hidden) enableWake();
-  });
-  document.addEventListener("touchstart", enableWake, false);
-  // watchdog: if the fallback video got paused by the system, restart it
-  setInterval(function(){ if (wakeVideo && wakeVideo.paused) wakeVideo.play(); }, 30000);
-  enableWake();
-
-  // ---------- boot ----------
-  applyNight(); applySizes(); tick();
-  startWeather(); loadBTC(); loadNameday();
-  setInterval(startWeather, 15*60*1000);
-  setInterval(loadBTC, 5*60*1000);
-  setInterval(loadNameday, 6*60*60*1000); // refresh name day ~4x a day
+  var saved=null;
+  try{ saved=localStorage.getItem("ns_theme"); }catch(e){}
+  set(saved==="dark");
+  t.onclick=function(){ set(b.className!=="dark"); };
 })();
 </script>
 </body>
