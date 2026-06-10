@@ -3,6 +3,8 @@
 A single-file HTML dashboard built for an old iPad Mini 4 in landscape.
 No frameworks, no build step, no accounts — just open it in Safari.
 
+<img width="2076" height="960" alt="NightStand-1-1-Day" src="https://github.com/user-attachments/assets/282a69e0-c911-4e43-9147-e4937a26e164" />
+
 ## Features
 
 **Layout (v1.1)** — top info bar with local weather (icon, temperature, condition,
@@ -19,7 +21,9 @@ date, Czech name day (svátek) and tomorrow's forecast.
 | Analog — 70's square | rounded-square face, hour dashes, no numbers |
 | Analog — minimal round | Braun-style circle, dashes only |
 | Analog — Swiss station | minute ticks + red second hand with disc |
-
+<div align="center">
+<img width="75%" alt="4watchfaces" src="https://github.com/user-attachments/assets/3e1c64f8-5d84-41a8-9eb4-1debe66ad547" />
+</div>
 **Night red mode** — switches the whole page to dim red automatically (default
 22:00–07:00, configurable), or force on/off; ☾ button toggles manually.
 Weather icons are tinted red, the BTC graph dims.
@@ -28,6 +32,10 @@ Weather icons are tinted red, the BTC graph dims.
 Avenir Next, Futura, American Typewriter, Menlo, Georgia, Marker Felt) with live
 preview; digit stretch up to +100%; clock-size and info-bar-size sliders (live);
 °C/°F; location by geolocation or typed city name (geocoded automatically).
+
+<div align="center">
+<img width="50%" alt="NightStand-1-1-Setting" src="https://github.com/user-attachments/assets/ffb037b3-1cc6-4aa4-ab64-a5ef756807a7" />
+</div>
 
 **Keep-awake** — uses the Wake Lock API on newer devices, an invisible looping
 micro-video fallback on older iOS. Still set Auto-Lock → Never for certainty.
