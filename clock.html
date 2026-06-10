@@ -547,7 +547,8 @@
     var u = "https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+
       "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code"+
       "&daily=sunrise,sunset,weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=2"+
-      "&temperature_unit="+cfg.units;
+      "&temperature_unit="+cfg.units+
+      (cfg.units==="fahrenheit" ? "&wind_speed_unit=mph" : "");
     getJSON(u, function(j){
       var c = j.current || {};
       var w = WMO[c.weather_code] || ["🌡","—"];
@@ -555,7 +556,8 @@
       $("w-temp").textContent = Math.round(c.temperature_2m)+"°";
       $("w-desc").textContent = w[1];
       $("w-extra").textContent = "Feels "+Math.round(c.apparent_temperature)+"° · "+
-        c.relative_humidity_2m+"% · "+Math.round(c.wind_speed_10m)+" km/h";
+        c.relative_humidity_2m+"% · "+Math.round(c.wind_speed_10m)+
+        (cfg.units==="fahrenheit" ? " mph" : " km/h");
       if (j.daily && j.daily.sunrise) {
         $("sunrise").textContent = "☀︎↑ "+hm(j.daily.sunrise[0]);
         $("sunset").textContent  = "☀︎↓ "+hm(j.daily.sunset[0]);
